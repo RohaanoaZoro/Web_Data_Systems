@@ -1,2 +1,4 @@
 nltk==3.8.1
 requests==2.31.0
+spacy==3.7.2
+#python -m spacy download en_core_web_sm
