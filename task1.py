@@ -2,9 +2,36 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import requests
+from bs4 import BeautifulSoup
+
 
 nltk.download('punkt')
 nltk.download('stopwords')
+
+
+def get_wikipedia_text(url):
+
+    # Send a GET request to the URL
+    response = requests.get(url)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        # Parse the HTML content of the page using BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Extract the main text content from the page
+        paragraphs = soup.find_all('p')  # Assuming paragraphs are wrapped in <p> tags
+
+        # Combine paragraphs into a single string
+        text_content = '\n'.join([paragraph.get_text() for paragraph in paragraphs])
+
+        return text_content
+    else:
+        # Print an error message if the request was not successful
+        print(f"Error: Unable to fetch content from {url}")
+        return None
+
+
 
 def preprocess_text(text):
     # Tokenize the text
@@ -16,7 +43,7 @@ def preprocess_text(text):
 
     return filtered_words
 
-
+#This uses the wikipedia search api to get a list of relevant links
 def search_wikipedia(query):
     endpoint = "https://en.wikipedia.org/w/api.php"
     params = {
@@ -59,3 +86,6 @@ for result in query_results:
     print(f"Title: {result['title']}")
     print(f"URL: {result['url']}")
     print(f"Page ID: {result['pageid']}\n")
+    text = get_wikipedia_text(result['url'])
+    print("text", text)
+    break
