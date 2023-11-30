@@ -1,4 +1,5 @@
 from ctransformers import AutoModelForCausalLM
+from step import *
 
 repository = "TheBloke/Llama-2-7B-GGUF"
 model_file = "llama-2-7b.Q4_K_M.gguf"
