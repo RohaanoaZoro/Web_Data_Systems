@@ -4,19 +4,20 @@ import spacy
 nlp = spacy.load('en_core_web_sm')
 
 
-def extract_entities(text):
+def extract_entities(text, split_entity_words):
     # Process the text with spaCy
     doc = nlp(text)
 
     # Extract entities
     entities = [ent.text for ent in doc.ents]
 
-    # Iterate through the words
-    for word in entities.copy():
-        if " " in word:
-            # If the word contains a space, split and append the resulting words
-            entities.remove(word)
-            entities.extend(word.split())
+    if(split_entity_words):
+        # Iterate through the words
+        for word in entities.copy():
+            if " " in word:
+                # If the word contains a space, split and append the resulting words
+                entities.remove(word)
+                entities.extend(word.split())
 
     return entities
 
@@ -108,8 +109,8 @@ def find_important_keywords(question):
 
 
 def verify_with_yes_no_for_question(missing_words, important_words):
-    q_entities = extract_entities(question)
-    llm_entities = extract_entities(llm_text)
+    q_entities = extract_entities(question, True)
+    llm_entities = extract_entities(llm_text, True)
 
     missing_enitities = check_missing_entities(q_entities, missing_words)
 
@@ -131,35 +132,204 @@ def verify_with_yes_no_for_question(missing_words, important_words):
     else:
         print("No, Due to missing entities this is not the answer", missing_enitities)
 
+def answer_yes_no_questions(question, llm_text):
+    missing_words = find_words_not_present_in_question(question, llm_text)
+    # print("missing_words", missing_words)
+
+    important_keywords = find_important_keywords(question)
+    # important_keywords.append(" ")
+    # print("important_keywords", important_keywords)
+
+    unique_missing_words = list(set(missing_words) - set(important_keywords))
+    # print("unique_missing_words", unique_missing_words)
+
+    #ToDO
+    # Word order to check if something is true. Italy is the capial of Rome?
+    # Negation not
+    yes_no_answer = verify_with_yes_no_for_question(missing_words, important_keywords)
+
+def answer_what_questions(question, llm_text):
+    missing_words = find_words_not_present_in_question(question, llm_text)
+    print("missing_words", missing_words)
+    q_entities = extract_entities(question, False)
+    print("q_entities", q_entities)
+
+    # extract_answer_what(llm_text, q_entities)
+    subject, verb, entity = extract_subject_verb_entity(question)
+    print("Subject:", subject)
+    print("Verb:", verb)
+    print("Entity:", entity)
+
+    extract_answer_what(llm_text, subject, verb, entity, q_entities)
+
+
+
+def extract_answer_what(llm_text, subject, verb, entity, q_entities):
+    llm_sentences = [sentence.text for sentence in nlp(llm_text).sents]
+
+    subject_pos = -1
+    verb_pos = -1
+    entitiy_pos = -1
+
+    possible_answers = []
+
+    for sentence in llm_sentences:
+        nlp_sentence = nlp(sentence)
+
+        current_pos = 0
+        for token in nlp_sentence:
+            if(len(subject)> 0 and token.lemma_ in subject):
+                subject_pos = current_pos
+
+            if(token.pos_ == "VERB" and token.lemma_ in verb):
+                verb_pos = current_pos
+
+            if(token.lemma_ in entity or token.lemma_ in q_entities):
+                entitiy_pos = current_pos
+
+            # print(token.pos_, token.lemma_)
+            if(token.pos_ == "ADP"):
+                for i in range(current_pos+1, len(nlp_sentence)):
+                    temp_token = nlp_sentence[i]
+                    if(temp_token.pos_ == "NOUN" or temp_token.pos_ == "PROPN" or temp_token.pos_ == "NUM"):
+                        possible_answers.append(temp_token.lemma_)
+                    else:
+                        break
+                    
+
+                    
+
+            current_pos+=1
+
+
+    print("possible_answers", possible_answers)
+    return possible_answers
+
+
+
+
+def extract_question_what(question, q_entities):
+
+    what_pos = -1
+    subject_pos = -1
+
+
+    keywords_to_lookfor = []
+    nlp_question = nlp(question)
+    current_index = 0
+    for token in nlp_question:
+        if(token.lemma_ == "what"):
+            what_pos = current_index
+
+        if(token.pos_ == "ADP" and search_pos != -1):
+            keywords_to_lookfor.append(token.lemma_)
+            search_pos = current_index
+
+
+
+        #This means that we have found the what and need to 
+        if((token.pos_ == "ADJ" or token.pos_ == "NOUN" or token.pos_ == "PROPN") and what_pos != -1):
+            keywords_to_lookfor.append(token.lemma_)
+            search_pos = current_index
+
+
+
+        current_index+=1
+
+def extract_subject_verb_entity(question):
+    doc = nlp(question)
+
+    subject = []
+    verb = []
+    entity = []
+
+    for token in doc:
+        if token.dep_ == "nsubj":
+            subject.append(token.text)
+        elif token.pos_ == "VERB":
+            verb.append(token.text)
+        elif "obj" in token.dep_:
+            entity.append(token.text)
+
+    return subject, verb, entity
+
+
+
+
+
+
+
+
 # question="What is the height of the Burj Khalifa?"
 # llm_text = "The buildings are 862 meters tall. How tall can a tree get? (height vs diameter) The World’s Tallest Building – Burj Khalifa -2016 What is the World's Highest Skyscraper? Burj Khalifa - World's Tallest Tower | Documentary 1080p HD What Is The World's Fastest Elevator? The World’s 5 Best Skyscrapers (& The Biggest Skyscraper Mistakes) "
 
 # This Works
-question = "Is London the capital of The United Kingdom?"
-llm_text = "London is in England which is the capital of The United Kingdom."
+# question = "Is London the capital of The United Kingdom?"
+# llm_text = "London is in England which is the capital of The United Kingdom."
 # llm_text = "London is located entirely within England."
 
 # This Works
-question = "Is the Mona Lisa housed in the Louvre Museum?"
-llm_text = "The Mona Lisa, housed within the Louvre Museum, is a small painting (9 1/2 inches x 13 5/8) on wood. The artist used egg tempera for the background and added oil paint to the outline of his models face and hair. The painting was created in Florence around 1503. Leonardo Da Vinci completed this painting sometime between June of 1502 and May of 1504. It is a portrait of Lisa Gherardini, wife of wealthy Italian merchant Francesco del Giocondo. She looks mysterious as she stares out at the viewer of the picture. Da Vinci was a master of proportions in painting, and he used subtle facial expressions that give us a sense of her personality. The Mona Lisa has been housed at the Louvre since 1797, when "
+# question = "Is the Mona Lisa housed in the Louvre Museum?"
+# llm_text = "The Mona Lisa, housed within the Louvre Museum, is a small painting (9 1/2 inches x 13 5/8) on wood. The artist used egg tempera for the background and added oil paint to the outline of his models face and hair. The painting was created in Florence around 1503. Leonardo Da Vinci completed this painting sometime between June of 1502 and May of 1504. It is a portrait of Lisa Gherardini, wife of wealthy Italian merchant Francesco del Giocondo. She looks mysterious as she stares out at the viewer of the picture. Da Vinci was a master of proportions in painting, and he used subtle facial expressions that give us a sense of her personality. The Mona Lisa has been housed at the Louvre since 1797, when "
 # llm_text = "The Mona Lisa, everybody knows that da Vinci’s work is one of the greatest artpieces ever made."
 
 # question = "Is Rome the capital of Italy?"
 # llm_text = "Milan is the second largest and most populated city in italy, but it's not the capital city. The capital city is Rome."
 # llm_text = "London is located entirely within England."
 
+# question = "s Elon Musk the CEO of Microsoft?"
+# llm_text = "nobody can be sure, but it seems a high probability that he will. this is how it will happen: 1- Microsoft buys Tesla for 7 billion $. 2- Musk becomes VP for Artificial Intelligence at Microsoft. 3- Musk starts to promote AI as the future, and in fact, the only way to survive on earth. 4- Musk talks about the singularity and why it is the only way out. 5- Musk says that the time left until the singularity has begun are few days or weeks at most, and that we have no other option but to accept this. 6- All people who don't agree with his statements will be considered AI-haters , and will be punished as such by being removed from the society and any rights they might have had so far. 7- People will start to complain about the censorship, but Microsoft will defend itself saying that is in accordance with the law against hate speech. 8- Any further discussion regarding the singularity will be considered AI-hate speech and will result in punishment for all involved parties, including the death penalty for Musk himself. 9"
+# llm_text = "Bill Gates is the CEO of Microsoft"
+
+question = "What is Albert Einstein's birth date?"
+# llm_text = "Albert Einstein's birth certificate shows that he was born in 14 March, but this date has never been authenticated by the German government, and some experts have suggested an alternative date based on his parents' marriage certificate.[23] This claim is disputed;[24] in any case, it remains unclear which of these dates—if either—is correct. What is the birthdate of Albert Einstein? The birthday of the famous scientist is unknown."
+llm_text = "Albert Einstein's birth certificate shows that he was born on 14 March,"
+llm_text = "Albert Einstein was born at Ulm, in Württemberg, Germany, on March 14, 1879."
+
+
+question = "What is the chemical formula for water?"
+llm_text = "explains water as H2O. It has two atoms (in this case, hydrogen) and one oxygen atom. If you were asked to write out a formula showing the number of each type of atom in a molecule or compound, you would first list its name. You might remember that water is composed of 2 parts hydrogen and 1 part oxygen. If you have ever seen an equation, then you know that you can use this information to create a formula for writing out the elements in a formula."
+
+
+question = "Is the Netherlands in Germany?"
+llm_text = "nobody likes to be reminded of this. So I guess the Germans don't either. They prefer to think that their country is so big and multi-faceted, that they simply can’t be held responsible for what happens in other parts of their country, particularly when those parts are in another EU member state. But the facts speak for themselves. After the Nazi period of terror from 1938 to 1945, Germany was stripped of all its colonies including Alsace-Lorraine and East Prussia, which were handed over to France and Poland respectively. In their place, in addition to taking control of large swathes of the east, West Germany got the Saarland, an area ceded from France between 1920-75. But this wasn’t enough for Chancellor Konrad Adenauer, who had a dream of creating an “German Empire” (Reich) extending from the Rhine to the Donets and Oder rivers, which are today shared by Germany, Poland, Austria, Switzerland, France, Ukraine, Slovakia, Czech Republic, Hungary, Moldova, Romania, Belarus. "
+
+
+question = "Is Amsterdam in The Netherlands?"
+llm_text = "Amsterdam is the Netherlands’ capital, known for its artistic heritage, elaborate canal system and narrow houses with gabled facades, legacies of the city’s 17th-century Golden Age. Its Museum District houses the Van Gogh Museum, works by Rembrandt and Vermeer at the Rijksmuseum, and modern art at the Stedelijk. Cycling is key to the city’s character, and there are numerous bike paths. "
+llm_text = "surely not! the capital of Holland is The Hague. but Amsterdam is also a major city and quite often tourists get confused because they are looking for information about the country, not just one city within it. so…what’s the deal? if you ask people to point out on a map where the Netherlands is located, most likely they will doze off or become extremely confused. Is Amsterdam In The Netherlands: A Short Answer To This Frequently Asked Question The answer to this question is not always straightforward due to the fact that many people don’t know exactly what constitutes a “country,” and what defines an “island.” However, if you look at it from a geographic standpoint, Amsterdam is located in The Netherlands because it lies within the bordered area that makes up Europe. In addition, it borders water on all sides which qualifies it as part of this continent’s land mass. There are many reasons why someone might want to know if Amsterdam is in The Netherlands or not. For example, some people may simply be curious about where their home country falls within the world map while others could have an interest in learning more about different countries around them so they can plan future traveling plans accordingly!"
+
+question = "Is University of Amsterdam in London?"
+llm_text = "It is a branch of the University of Amsterdam (UvA) that is based on the British campus. The university also runs branches in Barcelona and São Paulo. UvA College London has an internationally recognized research focus, which attracts researchers from all over the world."
+
+question = "Is Vrije University Amsterdam in London?"
+llm_text = " surely not. I don't know why this has to be answered all the time, but it is not a location of any university. The same goes for Leiden University and Utrecht University. I would like to know if there are universities for international students in the following countries: 1) Amsterdam (Netherlands), 2) Rotterdam (Netherlands), 3) Vienna (Austria), 4) Berlin (Germany) If not, is it possible to study in the Netherlands?"
+
 question = question.lower()
 llm_text = llm_text.lower()
 
-missing_words = find_words_not_present_in_question(question, llm_text)
-# print("missing_words", missing_words)
+llm_sentences = [sentence.text for sentence in nlp(llm_text).sents]
 
-important_keywords = find_important_keywords(question)
-# important_keywords.append(" ")
-# print("important_keywords", important_keywords)
+question_nlp = nlp(question)    
+print(question)
 
-unique_missing_words = list(set(missing_words) - set(important_keywords))
-# print("unique_missing_words", unique_missing_words)
+for token in question_nlp:
+    print(token.lemma_, token.pos_)
 
 
-yes_no_answer = verify_with_yes_no_for_question(missing_words, important_keywords)
+for sentence in llm_sentences:
+    #We extract the nlp information from each sentence e.g POS tags, lemma, etc
+    sentence_nlp = nlp(sentence)    
+    print(sentence)
+
+    for token2 in sentence_nlp:
+        print(token2.lemma_, token2.pos_)
+
+    break
+
+
+        
+
+
+answer_yes_no_questions(question, llm_text)
+# answer_what_questions(question, llm_text)
