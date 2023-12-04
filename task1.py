@@ -69,7 +69,7 @@ def search_wikipedia(query):
     return search_results
 
 # Example text
-input_text = "Is Italy the capital of Rome?"
+input_text = "nicaragua managua"
 
 # Preprocess the text
 result = preprocess_text(input_text)
@@ -86,6 +86,6 @@ for result in query_results:
     print(f"Title: {result['title']}")
     print(f"URL: {result['url']}")
     print(f"Page ID: {result['pageid']}\n")
-    text = get_wikipedia_text(result['url'])
-    print("text", text)
-    break
+    # text = get_wikipedia_text(result['url'])
+    # print("text", text)
+    # break
