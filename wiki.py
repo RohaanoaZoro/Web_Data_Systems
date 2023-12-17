@@ -1,7 +1,33 @@
 import requests
 from bs4 import BeautifulSoup
 
-def get_wikipedia_text(url):
+def get_wikipedia_text(url, no_paras):
+
+    # Send a GET request to the URL
+    response = requests.get(url)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        # Parse the HTML content of the page using BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Extract the main text content from the page
+        paragraphs = soup.find_all('p')  # Assuming paragraphs are wrapped in <p> tags
+        
+        if(no_paras >= 0):
+            paragraphs[:no_paras]
+
+        wiki_para_arr = []
+        for paragraph in paragraphs:
+            wiki_para_arr.append(paragraph.get_text())
+
+        return wiki_para_arr
+    else:
+        # Print an error message if the request was not successful
+        print(f"Error: Unable to fetch content from {url}")
+        return None
+
+def get_wikipedia_text2(url):
 
     # Send a GET request to the URL
     response = requests.get(url)
@@ -15,9 +41,9 @@ def get_wikipedia_text(url):
         paragraphs = soup.find_all('p')  # Assuming paragraphs are wrapped in <p> tags
 
         # Combine paragraphs into a single string
-        text_content = '\n'.join([paragraph.get_text() for paragraph in paragraphs])
+        # text_content = '\n'.join([paragraph.get_text() for paragraph in paragraphs])
 
-        return text_content
+        return paragraphs
     else:
         # Print an error message if the request was not successful
         print(f"Error: Unable to fetch content from {url}")
@@ -25,7 +51,11 @@ def get_wikipedia_text(url):
 
 
 #This uses the wikipedia search api to get a list of relevant links
-def search_wikipedia(query):
+def search_wikipedia(entity_list, important_keywords):
+
+    query = " ".join([word+" " for word in entity_list.keys()])
+    # query = query+" ".join([word+" " for word in important_keywords])
+
     endpoint = "https://en.wikipedia.org/w/api.php"
     params = {
         'action': 'query',

@@ -8,11 +8,11 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from typing import Tuple
 
 # Download the VADER lexicon for sentiment analysis
-nltk.download('vader_lexicon')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('punkt')
+# nltk.download('vader_lexicon')
+# nltk.download('averaged_perceptron_tagger')
+# nltk.download('punkt')
 
-def classify_yes_no_answers(text: str) -> Tuple[bool, str]:
+def classify_yes_no_answers(text: str):
     text = text.lower().strip()
     tokens = word_tokenize(text)
     tagged_tokens = pos_tag(tokens)
