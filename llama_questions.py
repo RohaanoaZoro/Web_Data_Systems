@@ -22,4 +22,6 @@ for prompt in prompts:
     print("Question: %s" % prompt)
     completion = llm(prompt)
     print("Answer: %s \n" % completion)
+
+    answer_yes_no_questions(prompt, completion)
     
