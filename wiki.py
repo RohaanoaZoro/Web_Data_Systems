@@ -52,7 +52,6 @@ def get_wikipedia_text2(url):
 
 #This uses the wikipedia search api to get a list of relevant links
 def search_wikipedia(entity_list, important_keywords):
-
     query = " ".join([word+" " for word in entity_list.keys()])
     # query = query+" ".join([word+" " for word in important_keywords])
 
@@ -71,6 +70,7 @@ def search_wikipedia(entity_list, important_keywords):
 
     # Extract links for each search result
     search_results = []
+
     for result in data['query']['search']:
         title = result['title']
         page_id = result['pageid']

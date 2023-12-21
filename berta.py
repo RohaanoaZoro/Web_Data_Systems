@@ -12,25 +12,35 @@ from typing import Tuple
 # nltk.download('averaged_perceptron_tagger')
 # nltk.download('punkt')
 
-def classify_yes_no_answers(text: str):
-    text = text.lower().strip()
-    tokens = word_tokenize(text)
-    tagged_tokens = pos_tag(tokens)
+def classify_yes_no_answers(text: str, question):
 
-    # Check for negation in context
-    negations = {"not", "n't", "never", "no", "none", "cannot", "can't"}
-    positives = {"yes", "sure", "definitely", "absolutely", "of course", "indeed"}
-    if any(token in negations for token, _ in tagged_tokens):
-        return True, "no"
-    elif any(token in positives for token, _ in tagged_tokens):
-        return True, "yes"
+    question = question.lower().strip()
+    question_tokens = word_tokenize(question)
+    question_tagged_tokens = pos_tag(question_tokens)
 
-    sia = SentimentIntensityAnalyzer()
-    sentiment_score = sia.polarity_scores(text)['compound']
-
-    if sentiment_score > 0.2:
-        return True, "yes"
-    elif sentiment_score < -0.2:
-        return True, "no"
+    has_wp_token = any(tag == 'WP' for word, tag in question_tagged_tokens)
+    
+    if (has_wp_token):
+        return False, "Wiki"
     else:
-        return False, "other"
+        text = text.lower().strip()
+        tokens = word_tokenize(text)
+        tagged_tokens = pos_tag(tokens)
+
+        # Check for negation in context
+        negations = {"not", "n't", "never", "no", "none", "cannot", "can't"}
+        positives = {"yes", "sure", "definitely", "absolutely", "of course", "indeed"}
+        if any(token in negations for token, _ in tagged_tokens):
+            return True, "no"
+        elif any(token in positives for token, _ in tagged_tokens):
+            return True, "yes"
+
+        sia = SentimentIntensityAnalyzer()
+        sentiment_score = sia.polarity_scores(text)['compound']
+
+        if sentiment_score > 0.2:
+            return True, "yes"
+        elif sentiment_score < -0.2:
+            return True, "no"
+        else:
+            return False, "no"
