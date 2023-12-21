@@ -5,6 +5,8 @@ import re
 from berta import classify_yes_no_answers
 from wiki import search_wikipedia, get_wikipedia_text
 
+import concurrent.futures
+
 # Load the English language model
 nlp = spacy.load('en_core_web_sm')
 
@@ -52,7 +54,6 @@ def extract_entities(text, split_entity_words):
     return entities
 
 def preprocess_text(text, split_entity_words):
-
 
     # Create a translation table for removing punctuation
     translator = str.maketrans('', '', string.punctuation)
@@ -102,6 +103,7 @@ def find_important_keywords(text, entities):
     temp_adj = []
     temp_verbs = []
     temp_keywords = []
+
     #Here I define the rule to conider when selecting important keywords
     for i in range(0, len(q_nlp)):
         token = q_nlp[i]
@@ -372,6 +374,48 @@ def handle_wiki_checking(entity_list, linked_entities, important_keywords, impor
 
     print("Part 4: my_wiki_urls", my_wiki_urls)
 
+def process_wiki_result(result):
+    # Printing the URL in wiki keywords results
+    print(f"URLz: {result['url']}")
+
+    # We get wiki text from Wikipedia
+    wiki_paras = get_wikipedia_text(result['url'], 10)
+
+    # score_arr = []
+    for wiki_para in wiki_paras:
+        # print(wiki_para)
+
+        #We match the information such entities links and important information(Nouns, Verbs and Adjectives) of the question and 
+        score = check_correctness(wiki_para, linked_entities, important_information, entities)
+        # score_arr.append(score)
+
+        # print("score XXX", score)
+        if(score >= 70):
+            # my_wiki_urls.append(result['url'])
+            return result['url']
+            # break
+
+        # print("score_arr", score_arr)
+    # return wiki_paras
+    return "Nope"
+
+def parallelize_wiki_text_fetching(entity_list, important_keywords):
+    wiki_search_results = search_wikipedia(entity_list, important_keywords)
+    # my_wiki_urls = []
+
+    # Function to process each wiki result in parallel
+    def process_result_in_parallel(result):
+        wiki_urls = process_wiki_result(result)
+        return wiki_urls
+
+    # Use ThreadPoolExecutor to parallelize the processing of wiki results
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        wiki_paras_list = list(executor.map(process_result_in_parallel, wiki_search_results))
+
+    # Continue with the rest of your code using the processed wiki text
+    for wiki_paras in wiki_paras_list:
+        print("wiki_paras", wiki_paras)
+        # Your code here
 
     
 
@@ -380,7 +424,7 @@ def handle_wiki_checking(entity_list, linked_entities, important_keywords, impor
 
 
 
-question = "Is London the capital of The United Kingdom?"
+question = "Is London the capital of the United Kingdom?"
 llm_text = "London is from England which is the capital of the United Kingdom."
 # llm_text = "London is located entirely within England."
 
@@ -413,7 +457,8 @@ if(score >= 70):
 else:
     print("Part 3: Incorrect", score)
 
-handle_wiki_checking(entity_list, linked_entities, important_keywords, important_information, entities)
+# handle_wiki_checking(entity_list, linked_entities, important_keywords, important_information, entities)
+parallelize_wiki_text_fetching(entity_list, important_keywords)
 
 # wiki_para = "The population of the United Kingdom was estimated at over 67.0 million in 2020. It is the 21st most populated country in the world and has a population density of 270 people per square kilometre (700 people/sq mi), with England having significantly greater density than Wales, Scotland, and Northern Ireland.[3] Almost a third of the population lives in south east England, which is predominantly urban and suburban, with about 9 million in the capital city, London, whose population density is just over 5,200 per square kilometre (13,468 per sq mi).[4]"
 
