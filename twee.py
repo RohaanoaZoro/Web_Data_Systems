@@ -215,6 +215,11 @@ def entity_linking(text, entities):
                 else:
                     linked_entities.append([current_entity, token.lemma_, prev_entity])
 
+    if len(linked_entities) == 0:
+        for ent in entities:
+            linked_entities.append([ent, "X", ent])
+
+
     return linked_entities
 
 def check_entity_links(linked_entities1, linked_entities2):
@@ -283,13 +288,15 @@ def calculate_score(matched_links, linked_entities, matched_nouns, matched_adj, 
 
     return score
 
-def extract_information_from_question(text):
+def extract_information_from_question(question):
 
     #Extract important keywords and entities from the question
     entities = extract_entities(question, 1)
     q_preprocessed_text = preprocess_text(question, 1)
     important_keywords, important_information = find_important_keywords(q_preprocessed_text, entities)
     linked_entities = entity_linking(q_preprocessed_text, entities)
+    print("XXXSSSS", linked_entities)
+
 
 
     return linked_entities, important_information, important_information, entities
@@ -399,8 +406,8 @@ def process_wiki_result(result):
     # return wiki_paras
     return "Nope"
 
-def parallelize_wiki_text_fetching(entity_list, important_keywords):
-    wiki_search_results = search_wikipedia(entity_list, important_keywords)
+def parallelize_wiki_text_fetching(entity_list, important_keyword, linked_entities):
+    wiki_search_results = search_wikipedia(entity_list, important_keywords, linked_entities)
     # my_wiki_urls = []
 
     # Function to process each wiki result in parallel
@@ -443,12 +450,22 @@ llm_text = "London is from England which is the capital of the United Kingdom."
 # question = "Was there significant imporvement in Amazon deforestation?"
 # llm_text = "As of 2023, there has been a significant reduction in Amazon deforestation. As of April 2023, Amazon deforestation was down 68% compared to the previous year, with 127 square miles of forest having been destroyed. This figure is notably below the historic April average of 176 square miles​​."
 
+# question = "The largest company in the world by revenue is Apple"
+# llm_text = "a US-based company. nobody cares about the US companies because their products are made overseas and not available to them The largest company in the world by revenue is Apple, a US-based company. nobody cares about the US companies because their products are made overseas and not available to them Agreed, but the OP asked specifically for large American firms which are not multinationals - that's why I suggested they take a look at IBM, Boeing etc. The biggest companies in the world by revenue "
+
+question="Is it true that that China is the country with most people in the world?"
+llm_text ="No, not quite. According to a recent estimate (2017), there were 1,380 million Chinese and 324 million Indians, so the number of people in India is larger than that of China by about 100 million. But the total population of China (1.4 billion) is still more than that of any other country. Question: Is it true that Chinese are the majority in America? Answer: No. The largest eth"
+
+# question = "Is Managua the capital of Nicaragua?"
+# llm_text = "surely it is, in 2018 it was declared the city with the worst pollution and air quality, so much that it even has a bad smell. Yes managuita is the capital of nicaragua! Managuita is not just the name of any other place like what you think but rather its the capital of Nicaragua, Managuita is also known as Gran Managua!"
 
 answer, strzz = classify_yes_no_answers(llm_text)
 print("Part 2: ", answer, strzz)
 
 #We extract the information such entities links and important information(Nouns, Verbs and Adjectives)
 linked_entities, important_keywords, important_information, entities = extract_information_from_question(question)
+
+print("linked_entities", linked_entities)
 
 #We match the information such entities links and important information(Nouns, Verbs and Adjectives) of the question and 
 score = check_correctness(llm_text, linked_entities, important_information, entities)
@@ -458,7 +475,7 @@ else:
     print("Part 3: Incorrect", score)
 
 # handle_wiki_checking(entity_list, linked_entities, important_keywords, important_information, entities)
-parallelize_wiki_text_fetching(entity_list, important_keywords)
+parallelize_wiki_text_fetching(entity_list, important_keywords, linked_entities)
 
 # wiki_para = "The population of the United Kingdom was estimated at over 67.0 million in 2020. It is the 21st most populated country in the world and has a population density of 270 people per square kilometre (700 people/sq mi), with England having significantly greater density than Wales, Scotland, and Northern Ireland.[3] Almost a third of the population lives in south east England, which is predominantly urban and suburban, with about 9 million in the capital city, London, whose population density is just over 5,200 per square kilometre (13,468 per sq mi).[4]"
 

@@ -51,10 +51,34 @@ def get_wikipedia_text2(url):
 
 
 #This uses the wikipedia search api to get a list of relevant links
-def search_wikipedia(entity_list, important_keywords):
+def search_wikipedia(entity_list, important_keywords, linked_entities):
 
-    query = " ".join([word+" " for word in entity_list.keys()])
-    # query = query+" ".join([word+" " for word in important_keywords])
+    query=" "
+    print("ZZZZZ linked_entities", linked_entities)
+
+    if len(linked_entities) > 0:
+        query += linked_entities[0][0]
+        for word in linked_entities:
+            query += word[2]+" "
+
+
+    elif len(entity_list) == 0:
+        query = query+" "+important_keywords["NOUN"][0][0] + " "
+        query = query+" ".join([word[1]+" " for word in important_keywords["NOUN"]])
+        query = query+" ".join([word[1]+" " for word in important_keywords["ADJ"]])
+        query = query+" ".join([word[1]+" " for word in important_keywords["VERB"]])
+    else:
+        query = query+" ".join([word+" " for word in entity_list.keys()])
+
+    print("PPPPPP linked_entities", linked_entities)
+
+
+
+
+    # for word in important_keywords["NOUN"]:
+    #     print("word", word[1])
+    print("query", query, entity_list)
+
 
     endpoint = "https://en.wikipedia.org/w/api.php"
     params = {
