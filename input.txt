@@ -1,1 +1,30 @@
+question-001	Is Managua the capital of Nicaragua?
+question-002	Question: Is it true that that China is the country with most people in the world? Answer: 
+question-003	The largest company in the world by revenue is Apple
 question-004	Question: Who is the director of Pulp Fiction? Answer: 
+question-005	Question: Is it true that the monarch of England is also the monarch of Canada? Answer: 
+question-006    Is London the capital of The United Kingdom?
+question-007    What is the capital of Australia?
+question-008    Is the Mona Lisa housed in the Louvre Museum?
+question-009    Who directed the movie "Inception"?
+question-010    What is the chemical formula for water?
+question-011    Question: What is the chemical name of the element with the atomic number 23?
+question-012    Is Mount Everest the highest peak in the world?
+question-013    What is an empirical formula of sugar?
+question-014    Is English the official language of the Netherlands?
+question-015    What is the capital of Nicaragua?
+question-016    The capital of nicaragua is...?
+question-017    What is the empirical formula?
+question-018    Question: How many molecules are in 15 grams of water?
+question-019    What is the population of Tokyo?
+question-020    Is Barack Obama listed as a Nobel Prize laureate?
+question-021    Question: Who painted the Mona Lisa?
+question-022    What is the diameter of Earth?
+question-023    Is "The Great Gatsby" written by F. Scott Fitzgerald?
+question-024    What is the longest river in Africa?
+question-025    is Managua the capital of Nicaragua?
+question-026    Is the Eiffel Tower located in China?
+question-027    Is Elon Musk the CEO of Microsoft?
+question-028    Question: What is the capital of Germany?
+question-029    Is the Pacific Ocean the largest ocean on Earth?
+question-030    Managua is not the capital of Nicaragua. Yes or no?
