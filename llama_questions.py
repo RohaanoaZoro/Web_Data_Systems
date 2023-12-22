@@ -1,9 +1,4 @@
 from berta import classify_yes_no_answers
-
-# from twee import extract_information_from_question
-# from twee import check_correctness
-# from twee import handle_wiki_checking
-
 from twee import *
 
 from llama_cpp import Llama
@@ -12,44 +7,55 @@ model_path = "models/llama-2-7b.Q4_K_M.gguf"
 # model_path = "models/llama-2-13b.Q4_K_M.gguf"
 llm = Llama(model_path=model_path, verbose=False)
 
-prompts = [
-    # "Is the population of Paris greater than 2 million?",
-    # "Is Mount Everest the highest peak in the world?",
-    # "Is Barack Obama listed as a Nobel Prize laureate?",
-    # "Is the Eiffel Tower located in China?",
-    # "Is the Mona Lisa housed in the Louvre Museum?",
-    # "Is English the official language of the Netherlands?",
-    # "Is Elon Musk the CEO of Microsoft?",
-    # "Is the Pacific Ocean the largest ocean on Earth?",
-    # 'Is "The Great Gatsby" written by F. Scott Fitzgerald?',
-    # 'Is the Statue of Liberty located in London?'
-    "Is London the capital of The United Kingdom?",
-    'Question: What is the capital of Germany?'
-]
+def get_questions():
+    f = open("input.txt", "r")
+    questions_num = []
+    quesions = []
 
-for prompt in prompts:
-    print("Input (A): ", prompt)
+    for q in f: 
+        question_words = q.split()
+        questions_num.append(question_words[0])
+        question_words.pop(0)
+        quesions.append(' '.join(question_words))
+    
+    return questions_num, quesions
 
-    completion = llm(prompt)
+
+questions_num, questions = get_questions()
+
+# output_file = open('output.txt', 'w')
+
+i = 0
+for question in questions:
+    print(questions_num[i] + '     ' + question)   #REMOVE
+    # output_file.write(questions_num[i] + '     ' + question +'\n')
+
+    completion = llm(question)
     llm_text = completion['choices'][0]['text']
-    print("Text returned by the language model (B) (llama 2, 7B): ", llm_text)
 
-    tf,extracted_answer = classify_yes_no_answers(llm_text,prompt)
+    print(questions_num[i] + '     R"' +llm_text+'"')   #REMOVE
+    # output_file.write(questions_num[i] + '     R"' +llm_text+'"\n')
+
+    tf,extracted_answer = classify_yes_no_answers(llm_text,question)
     if (extracted_answer == "Wiki") : print("Extracted answer: https://", extracted_answer)
-    else : print("Extracted answer: ", extracted_answer)
+    else : print(questions_num[i] + '     A"' +extracted_answer+'"')
 
     # We extract the information such entities links and important information(Nouns, Verbs and Adjectives)
-    linked_entities, important_keywords, important_information, entities = extract_information_from_question(prompt)
+    linked_entities, important_keywords, important_information, entities = extract_information_from_question(question)
 
     # We match the information such entities links and important information(Nouns, Verbs and Adjectives) of the question and 
     score = check_correctness(llm_text, linked_entities, important_information, entities)
     if(score >= 70):
-        # print("Part 3: Correct", score)
-        print('Correctness of the answer: "correct"')
+        print(questions_num[i] + '     C' +'"correct"') #REMOVE
+        # output_file.write(questions_num[i] + '     C' +'"correct"\n')
     else:
-        print('Correctness of the answer: "incorrect"')
-        # print("Part 3: Incorrect", score)
+        print(questions_num[i] + '     C' +'"incorrect"') #REMOVE
+        # output_file.write(questions_num[i] + '     C' +'"incorrect"\n')
         
     # handle_wiki_checking(entity_list, linked_entities, important_keywords, important_information, entities)
+    parallelize_wiki_text_fetching(entity_list, important_keywords, linked_entities, entities)
 
-    
+    # del entity_list, linked_entities, important_keywords, important_information, entities
+    i=i+1
+
+# output_file.close()
