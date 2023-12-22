@@ -34,14 +34,12 @@ def extract_entities(text, split_entity_words):
                 filtered_list = [word for word in temp_split if word.lower() not in set(nlp.Defaults.stop_words)]
                 
                 entities.extend(filtered_list)
-
+    # This is the case for replacing enities if they have space with Entity_ + (Index)
     elif(split_entity_words == 1):
          for i in range(0, len(entities)):
             word = entities[i]
             if " " in entities[i]:
                 # If the word contains a space, split and append the resulting words
-                # entities.extend(word.split())
-                # entities[i] = entities[i].replace(" ", "_").lower()
                 if(entities[i] not in entity_list):
                     entity_list[entities[i]] = str(index_g)
                     entities[i] = "ENTITY_"+ str(index_g)
@@ -68,17 +66,13 @@ def preprocess_text(text, split_entity_words):
 
     replaced_text = cleaned_text
 
-
     doc = nlp(replaced_text)
-
 
     if(split_entity_words == 1):
         #Replace text for entities with space to underscore
         for ent in doc.ents:
             if " " in ent.text:
-                # replaced_text = replaced_text.replace(ent.text, ent.text.replace(' ', '_'))
                 if ent.text in entity_list:
-                    # entities[i] = "ENTITY"+ entity_list[ent.text]
                     replaced_text = replaced_text.replace(ent.text, "ENTITY_"+ entity_list[ent.text])
 
     
@@ -90,8 +84,6 @@ def preprocess_text(text, split_entity_words):
 
 def find_important_keywords(text, entities):
     q_nlp = nlp(text)
-    # entities = [ent.text for ent in q_nlp.ents]
-    # print("entities", entities)
 
     current_entiity = ""
     important_nouns = []
@@ -139,18 +131,19 @@ def find_important_keywords(text, entities):
                 #Setting current entity to new entity
                 current_entiity = token.lemma_
 
+        #Append Nouns to list
         elif(token.pos_ == "NOUN" or token.pos_ == "PROPN"):
             important_keywords.append(token.lemma_)
             temp_keywords.append(token.lemma_)
             temp_nouns.append(token.lemma_)
 
-
+        #Append ADJ to list
         elif(token.pos_ == "ADJ"):
             important_keywords.append(token.lemma_)
             temp_keywords.append(token.lemma_)
             temp_adj.append(token.lemma_)
 
-
+        #Append VERB to list
         elif(token.pos_ == "VERB"):
             important_keywords.append(token.lemma_)
             temp_keywords.append(token.lemma_)
@@ -176,7 +169,6 @@ def find_important_keywords(text, entities):
         "VERB" : important_verbs
     }
 
-    # print("important_keywords", important_keywords)
     return important_keywords, important_information
 
 def entity_linking(text, entities):
@@ -189,6 +181,9 @@ def entity_linking(text, entities):
 
     for i in range(0, len(t_nlp)):
         token = t_nlp[i]
+
+        #In this case we assume that the entity has appeared after the ADP POS Tag and then we establish the entity link from the temp array 
+        # But this is assuming that either the prev or current entity is an empty string
         if(token.lemma_ in entities):
             if(len(temp_links) > 0):
                 for t in temp_links:
@@ -202,6 +197,7 @@ def entity_linking(text, entities):
             prev_entity = current_entity
             current_entity = token.lemma_
 
+        #If an ADP is detected we link the previous and current entity
         elif(token.pos_ == "ADP"):
             if(prev_entity != current_entity):
                 if(prev_entity == ""):
@@ -215,6 +211,7 @@ def entity_linking(text, entities):
                 else:
                     linked_entities.append([current_entity, token.lemma_, prev_entity])
 
+    # This is for the case that only one entity is present
     if len(linked_entities) == 0:
         for ent in entities:
             linked_entities.append([ent, "X", ent])
@@ -222,35 +219,35 @@ def entity_linking(text, entities):
 
     return linked_entities
 
+# We check how many links are common between the 2 entities
 def check_entity_links(linked_entities1, linked_entities2):
-    # print("hello",linked_entities1, linked_entities2)
     matched_links = []
     for links in linked_entities1:
         for links2 in linked_entities2:
-            # print("links", links, links2)
             if(links[0] == links2[0] and links[2] == links2[2]):
                 matched_links.append(links)
 
     return matched_links
 
-
+# We check how many keywords are common betwee the 2 entities
 def check_keyword_matches(important_information1, important_information2):
     matched_nouns = []
     matched_adj = []
     matched_verbs = []
-    # print("important_information1", important_information1)
-    # print("important_information2", important_information2)
 
+    # We check how many NOUN are common betwee the 2 entities
     for imp1 in important_information1["NOUN"]:
          for imp2 in important_information2["NOUN"]:
             if(imp1[0] == imp1[0] and imp2[1] == imp2[1]):
                 matched_nouns.append(imp1)
 
+    # We check how many ADJ are common betwee the 2 entities
     for imp1 in important_information1["ADJ"]:
          for imp2 in important_information2["ADJ"]:
             if(imp1[0] == imp1[0] and imp2[1] == imp2[1]):
                 matched_adj.append(imp1)
 
+    # We check how many VERB are common betwee the 2 entities
     for imp1 in important_information1["VERB"]:
         for imp2 in important_information2["VERB"]:
             if(imp1[0] == imp1[0] and imp2[1] == imp2[1]):
@@ -258,12 +255,13 @@ def check_keyword_matches(important_information1, important_information2):
 
     return matched_nouns, matched_adj, matched_verbs
 
+# We caculate the text relevance score between the question and the text
 def calculate_score(matched_links, linked_entities, matched_nouns, matched_adj, matched_verbs, important_information, entities, entities2):
     score = 100
-    # print("matched_links", matched_links, linked_entities)
+    # We subtract the missing entity links * weigtage(50)
     if(len(matched_links) < len(linked_entities)):
         score -= int((len(linked_entities) - len(matched_links)) / len(linked_entities))*50
-        # print("Reason: Important Entities missing ", matched_links, linked_entities)
+        # print("Reason: Important Entities  ", matched_links, linked_entities)
 
     elif(len(linked_entities) == 0):
         unique_to_list = list(set(entities) - set(entities2))
@@ -271,17 +269,17 @@ def calculate_score(matched_links, linked_entities, matched_nouns, matched_adj, 
             score -= (len(unique_to_list)/len(entities)) * 50
             # print("Reason: Important Entities missing ", unique_to_list)
 
-
+    # We subtract the missing NOUNS * weigtage(20)
     if(len(matched_nouns) < len(important_information["NOUN"])):
         score -= int((len(important_information["NOUN"]) - len(matched_nouns)) / len(important_information["NOUN"]))*20
         # print("Reason: Important Nouns missing ", matched_nouns, important_information["NOUN"])
 
-
+    # We subtract the missing ADJ * weigtage(10)
     if(len(matched_adj) < len(important_information["ADJ"])):
         score -= int((len(important_information["ADJ"]) - len(matched_adj)) / len(important_information["ADJ"]))*10
         # print("Reason: Important ADJ missing ", matched_adj, important_information["ADJ"])
 
-
+    # We subtract the missing VERB * weigtage(20)
     if(len(matched_verbs) < len(important_information["VERB"])):
         score -= int((len(important_information["VERB"]) - len(matched_verbs)) / len(important_information["VERB"]))*20
         # print("Reason: Important VERBS missing ", matched_verbs, important_information["VERB"])
@@ -313,10 +311,12 @@ def check_correctness(llm_text, linked_entities, important_information, entities
     # print("important_keywords2", important_keywords2)
     # print("linked_entities2", linked_entities2)
 
+    #Get number of enitity links in common between question and llm text
     matched_links = check_entity_links(linked_entities, linked_entities2)
     # print("matched_links", matched_links)
     # print("Check", len(matched_links), len(linked_entities))
 
+    #Get number of keywords in common between question and llm text
     matched_nouns, matched_adj, matched_verbs = check_keyword_matches(important_information, important_information2)
     # print("Check Noun", len(matched_nouns), len(important_information["NOUN"]))
     # print("Check ADJ", len(matched_adj), len(important_information["ADJ"]))
@@ -326,33 +326,10 @@ def check_correctness(llm_text, linked_entities, important_information, entities
 
     return score
 
-def check_correctness2(llm_text, linked_entities, important_information, entities):
-    # Extract important keywords and entities from the question
-    entities2 = extract_entities(llm_text, 1)
-    preprocessed_text2 = preprocess_text(llm_text, 1)
-    important_keywords2, important_information2 = find_important_keywords(preprocessed_text2, entities2)
-    linked_entities2 = entity_linking(preprocessed_text2, entities2)
-
-    # print("entities2", entities2)
-    # print("important_information2", important_information2)
-    # print("important_keywords2", important_keywords2)
-    # print("linked_entities2", linked_entities2)
-
-    matched_links = check_entity_links(linked_entities, linked_entities2)
-    print("matched_links", matched_links)
-    print("Check", len(matched_links), len(linked_entities))
-
-    matched_nouns, matched_adj, matched_verbs = check_keyword_matches(important_information, important_information2)
-    print("Check Noun", len(matched_nouns), len(important_information["NOUN"]))
-    print("Check ADJ", len(matched_adj), len(important_information["ADJ"]))
-    print("Check Verb", len(matched_verbs), len(important_information["VERB"]))
-
-    score = calculate_score(matched_links, linked_entities, matched_nouns, matched_adj, matched_verbs, important_information, entities, entities2)
-
-    return score
 
 def handle_wiki_checking(entity_list, linked_entities, important_keywords, important_information, entities):
 
+    #Using wikipedia search API we get the top 5 relevant links
     wiki_search_results = search_wikipedia(entity_list, important_keywords)
     my_wiki_urls = []
 
@@ -364,22 +341,16 @@ def handle_wiki_checking(entity_list, linked_entities, important_keywords, impor
         # We get wiki text from wikipedia
         wiki_paras = get_wikipedia_text(result['url'], 10)
 
-        score_arr = []
         for wiki_para in wiki_paras[:10]:
             # print(wiki_para)
 
             #We match the information such entities links and important information(Nouns, Verbs and Adjectives) of the question and 
             score = check_correctness(wiki_para, linked_entities, important_information, entities)
-            score_arr.append(score)
 
-            # print("score XXX", score)
             if(score >= 70):
                 my_wiki_urls.append(result['url'])
-                # break
+                break
 
-        print("score_arr", score_arr)
-
-    print("Part 4: my_wiki_urls", my_wiki_urls)
 
 def process_wiki_result(result):
     # Printing the URL in wiki keywords results
@@ -388,24 +359,19 @@ def process_wiki_result(result):
     # We get wiki text from Wikipedia
     wiki_paras = get_wikipedia_text(result['url'], 10)
 
-    # score_arr = []
+    #Traverse thorough every paragraph
     for wiki_para in wiki_paras:
-        # print(wiki_para)
-
         #We match the information such entities links and important information(Nouns, Verbs and Adjectives) of the question and 
         score = check_correctness(wiki_para, linked_entities, important_information, entities)
-        # score_arr.append(score)
 
-        # print("score XXX", score)
         if(score >= 70):
-            # my_wiki_urls.append(result['url'])
             return result['url']
-            # break
 
         # print("score_arr", score_arr)
     # return wiki_paras
     return "Nope"
 
+# Using multi-threading we parallize the wiki information extraction and verification process
 def parallelize_wiki_text_fetching(entity_list, important_keyword, linked_entities):
     wiki_search_results = search_wikipedia(entity_list, important_keywords, linked_entities)
     # my_wiki_urls = []
